@@ -11,7 +11,7 @@ Packages are only read as zip archives; nothing in them is ever executed.
 import argparse, datetime, hashlib, io, json, os, re, shutil, sys, urllib.parse, urllib.request, zipfile
 
 TOPIC = "kmod-mod"
-MAX_PACKAGE = 100 * 1024 * 1024
+MAX_PACKAGE = 512 * 1024 * 1024  # packages may carry pak files
 MAX_IMAGE = 512 * 1024
 KEEP_VERSIONS = 5
 IMAGE_EXT = (".png", ".jpg", ".jpeg", ".webp")
@@ -83,6 +83,7 @@ def version_entry(m, data, url, published):
         "published": published,
         "platforms": platforms_of(m),
         "native": bool(m.get("native")),
+        "paks": bool(m.get("paks")),
         "permissions": [str(x) for x in m.get("permissions", [])],
         "depends": [str(x) for x in m.get("depends", [])],
     }
