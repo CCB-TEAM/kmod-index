@@ -130,8 +130,30 @@ def from_folder(folder, out):
     return list(found.values())
 
 
+def downloads_of(asset):
+    # the indexer itself downloads every package it lists exactly once
+    return max(int(asset.get("download_count") or 0) - 1, 0)
+
+
+def kmod_asset(rel):
+    return next((a for a in rel.get("assets", []) if a["name"].lower().endswith(".kmod") and a["size"] <= MAX_PACKAGE), None)
+
+
+def reusable(before, asset, newest, out):
+    """Can the entry of the previous run stand for this asset? Downloading again would count as a download."""
+    if not before:
+        return False
+    mod, version = before
+    if asset.get("digest") != "sha256:" + version["sha256"] or "paks" not in version:
+        return False
+    if not newest:
+        return True
+    # the mod's name, description and pictures come from its newest package
+    return mod["versions"][0]["url"] == version["url"] and all(os.path.isfile(os.path.join(out, mod[k])) for k in ("icon", "cover") if mod.get(k))
+
+
 def from_github(out, old):
-    known = {(v["url"]): v for m in old.get("mods", []) for v in m.get("versions", [])}
+    known = {v["url"]: (m, v) for m in old.get("mods", []) for v in m.get("versions", [])}
     repos, page = [], 1
     while page <= 10:
         r = api(f"search/repositories?q=topic:{TOPIC}&per_page=100&page={page}")
@@ -144,32 +166,52 @@ def from_github(out, old):
     for repo in repos:
         full = repo["full_name"]
         try:
-            releases = api(f"repos/{full}/releases?per_page=20")
-            versions, latest = [], None
+            releases = [r for r in api(f"repos/{full}/releases?per_page=100") if not r.get("draft")]
+            versions, latest = [], None  # latest: (id, entry without versions or None, (manifest, images) or None)
             for rel in releases:
-                if rel.get("draft") or len(versions) >= KEEP_VERSIONS:
-                    continue
-                asset = next((a for a in rel.get("assets", []) if a["name"].lower().endswith(".kmod") and a["size"] <= MAX_PACKAGE), None)
+                if len(versions) >= KEEP_VERSIONS:
+                    break
+                asset = kmod_asset(rel)
                 if not asset:
                     continue
                 url = asset["browser_download_url"]
-                data = get(url, accept="application/octet-stream")
-                m, images = read_package(data)
-                if latest and m["id"] != latest[0]["id"]:
-                    continue
+                published = rel.get("published_at", "")[:10]
                 before = known.get(url)
-                if before and before["sha256"] != hashlib.sha256(data).hexdigest():
-                    log(full, "the file of", url, "changed after it was indexed")
-                versions.append(version_entry(m, data, url, rel.get("published_at", "")[:10]))
-                latest = latest or (m, images)
+                if reusable(before, asset, latest is None, out):
+                    mod_id = before[0]["id"]
+                    version = dict(before[1], published=published)
+                    found = (mod_id, before[0], None)
+                else:
+                    data = get(url, accept="application/octet-stream")
+                    m, images = read_package(data)
+                    mod_id = m["id"]
+                    if before and before[1]["sha256"] != hashlib.sha256(data).hexdigest():
+                        log(full, "the file of", url, "changed after it was indexed")
+                    version = version_entry(m, data, url, published)
+                    found = (mod_id, None, (m, images))
+                if latest and mod_id != latest[0]:
+                    continue
+                version["downloads"] = downloads_of(asset)
+                versions.append(version)
+                latest = latest or found
             if not latest:
                 continue
-            m, images = latest
-            if m["id"] in taken:
-                log(full, "id", m["id"], "is already taken, skipped")
+            mod_id, previous, package = latest
+            if mod_id in taken:
+                log(full, "id", mod_id, "is already taken, skipped")
                 continue
-            taken.add(m["id"])
-            mods.append(mod_entry(m, images, out, versions, {"repo": repo["html_url"], "stars": repo["stargazers_count"], "updated": versions[0]["published"]}))
+            taken.add(mod_id)
+            extra = {
+                "repo": repo["html_url"],
+                "stars": repo["stargazers_count"],
+                "downloads": sum(downloads_of(a) for a in map(kmod_asset, releases) if a),  # all releases, not only the listed ones
+                "updated": versions[0]["published"],
+            }
+            if package:
+                mods.append(mod_entry(package[0], package[1], out, versions, extra))
+            else:
+                entry = {k: previous[k] for k in ("id", "name", "author", "description", "icon", "cover") if k in previous}
+                mods.append(dict(entry, versions=versions, **extra))
         except Exception as e:  # one broken repository must not stop the index
             log(full, e)
     return mods
