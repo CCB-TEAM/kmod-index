@@ -1,6 +1,6 @@
 {
  "schema": 1,
- "generated": "2026-11-26T09:56:56Z",
+ "generated": "2026-11-26T11:36:45Z",
  "blocked": [],
  "mods": [
   {
@@ -9,6 +9,23 @@
    "author": "CCB-TEAM",
    "description": "Switch card art on the card detail page; import your own pictures and GIFs (with a 1:1 cropper) and manage art packs.",
    "versions": [
+    {
+     "version": "0.2.2",
+     "url": "https://github.com/CCB-TEAM/kmod-card-art/releases/download/v0.2.2/card_art-0.2.2.kmod",
+     "sha256": "07f014330456d08f2711a5baa767eda663b7d99cc2c58248407cfe7c9ba34c71",
+     "size": 101009,
+     "published": "2026-11-26",
+     "platforms": [
+      "Android",
+      "Windows"
+     ],
+     "native": false,
+     "permissions": [],
+     "depends": [
+      "kmod>=0.4.0",
+      "kards>=1.61"
+     ]
+    },
     {
      "version": "0.2.1",
      "url": "https://github.com/CCB-TEAM/kmod-card-art/releases/download/v0.2.1/card_art-0.2.1.kmod",
@@ -44,7 +61,6 @@
      ]
     }
    ],
-   "icon": "icons/card_art.png",
    "cover": "covers/card_art.jpg",
    "repo": "https://github.com/CCB-TEAM/kmod-card-art",
    "stars": 0,
