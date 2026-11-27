@@ -1,6 +1,6 @@
 {
  "schema": 1,
- "generated": "2026-11-26T19:00:04Z",
+ "generated": "2026-11-27T16:40:15Z",
  "blocked": [],
  "mods": [
   {
@@ -27,7 +27,7 @@
       "kmod>=0.4.0",
       "kards>=1.50"
      ],
-     "downloads": 6
+     "downloads": 7
     },
     {
      "version": "0.2.2",
@@ -89,7 +89,7 @@
    ],
    "repo": "https://github.com/CCB-TEAM/kmod-card-art",
    "stars": 0,
-   "downloads": 51,
+   "downloads": 52,
    "updated": "2026-11-26",
    "verified": false
   }
